@@ -1,5 +1,5 @@
 /*
-Copyright 2023 will@trustauth.net.
+Copyright 2023 will@byted.sh.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,28 +29,28 @@ import (
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:printcolumn:name="NotAfter",type="date",JSONPath=".metadata.notBefore"
 //+kubebuilder:printcolumn:name="NotAfter",type="date",JSONPath=".metadata.notAfter"
-//+kubebuilder:printcolumn:name="CertChain",type="string",JSONPath=".metadata.certChain"
+//+kubebuilder:printcolumn:name="CertificateChain",type="string",JSONPath=".metadata.certChain"
 
-// Issuer is the Schema for the issuers API
-type Issuer struct {
+// SpireIssuer is the Schema for the issuers API
+type SpireIssuer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IssuerSpec   `json:"spec,omitempty"`
-	Status IssuerStatus `json:"status,omitempty"`
+	Spec   SpireIssuerSpec   `json:"spec,omitempty"`
+	Status SpireIssuerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// IssuerList contains a list of Issuer
-type IssuerList struct {
+// SpireIssuerList contains a list of SpireIssuer
+type SpireIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Issuer `json:"items"`
+	Items           []SpireIssuer `json:"items"`
 }
 
-// IssuerSpec defines the desired state of Issuer
-type IssuerSpec struct {
+// SpireIssuerSpec defines the desired state of SpireIssuer
+type SpireIssuerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -67,16 +67,18 @@ const (
 	Mint       WorkMode = "mint"
 )
 
-// IssuerStatus defines the observed state of Issuer
-type IssuerStatus struct {
+// SpireIssuerStatus defines the observed state of SpireIssuer
+type SpireIssuerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Phase      Phase              `json:"phase,omitempty"`
-	NotBefore  *metav1.Time       `json:"notBefore,omitempty"`
-	NotAfter   *metav1.Time       `json:"notAfter,omitempty"`
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	CertChain  string             `json:"certChain,omitempty"`
+	Phase            Phase              `json:"phase,omitempty"`
+	NotBefore        metav1.Time        `json:"notBefore,omitempty"`
+	NotAfter         metav1.Time        `json:"notAfter,omitempty"`
+	Conditions       []metav1.Condition `json:"conditions,omitempty"`
+	Certificate      string             `json:"certificate,omitempty"`
+	CertificateChain string             `json:"certificateChain,omitempty"`
+	TrustPool        string             `json:"trustPool,omitempty"`
 }
 
 type Phase string
@@ -88,5 +90,5 @@ const (
 )
 
 func init() {
-	SchemeBuilder.Register(&Issuer{}, &IssuerList{})
+	SchemeBuilder.Register(&SpireIssuer{}, &SpireIssuerList{})
 }

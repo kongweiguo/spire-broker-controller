@@ -2,8 +2,9 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/spire.trustauth.net_issuers.yaml
-- bases/spire.trustauth.net_clusterissuers.yaml
+- bases/spire.byted.sh_issuers.yaml
+- bases/spire.byted.sh_clusterissuers.yaml
+- bases/spire.byted.sh_spires.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -17,6 +18,7 @@ patchesStrategicMerge:
 # patches here are for enabling the CA injection for each CRD
 #- patches/cainjection_in_issuers.yaml
 #- patches/cainjection_in_clusterissuers.yaml
+#- path: patches/cainjection_in_spires.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.

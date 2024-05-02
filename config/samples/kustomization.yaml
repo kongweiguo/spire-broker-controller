@@ -2,4 +2,5 @@
 resources:
 - spire_v1alpha1_issuer.yaml
 - spire_v1alpha1_clusterissuer.yaml
+- spire_v1alpha1_spire.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

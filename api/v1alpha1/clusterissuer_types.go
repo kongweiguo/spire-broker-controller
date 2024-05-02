@@ -1,5 +1,5 @@
 /*
-Copyright 2023 will@trustauth.net.
+Copyright 2023 will@byted.sh.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,24 +27,24 @@ import (
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 
-// ClusterIssuer is the Schema for the clusterissuers API
-type ClusterIssuer struct {
+// ClusterSpireIssuer is the Schema for the clusterissuers API
+type ClusterSpireIssuer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IssuerSpec   `json:"spec,omitempty"`
-	Status IssuerStatus `json:"status,omitempty"`
+	Spec   SpireIssuerSpec   `json:"spec,omitempty"`
+	Status SpireIssuerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ClusterIssuerList contains a list of ClusterIssuer
-type ClusterIssuerList struct {
+// ClusterSpireIssuerList contains a list of ClusterSpireIssuer
+type ClusterSpireIssuerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterIssuer `json:"items"`
+	Items           []ClusterSpireIssuer `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterIssuer{}, &ClusterIssuerList{})
+	SchemeBuilder.Register(&ClusterSpireIssuer{}, &ClusterSpireIssuerList{})
 }

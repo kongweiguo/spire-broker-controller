@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: service
     app.kubernetes.io/instance: controller-manager-metrics-service
     app.kubernetes.io/component: kube-rbac-proxy
-    app.kubernetes.io/created-by: spire-broker-controller
-    app.kubernetes.io/part-of: spire-broker-controller
+    app.kubernetes.io/created-by: spire-issuer
+    app.kubernetes.io/part-of: spire-issuer
     app.kubernetes.io/managed-by: kustomize
   name: controller-manager-metrics-service
   namespace: system

@@ -1,12 +1,12 @@
-apiVersion: spire.trustauth.net/v1alpha1
+apiVersion: spire.byted.sh/v1alpha1
 kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: issuer
     app.kubernetes.io/instance: issuer-sample
-    app.kubernetes.io/part-of: spire-broker-controller
+    app.kubernetes.io/part-of: spire-issuer
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: spire-broker-controller
+    app.kubernetes.io/created-by: spire-issuer
   name: issuer-sample
   namespace: default
 spec:

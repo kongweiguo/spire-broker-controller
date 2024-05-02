@@ -23,7 +23,7 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - spire.trustauth.net
+  - spire.byted.sh
   resources:
   - clusterissuers
   - issuers
@@ -32,10 +32,36 @@ rules:
   - list
   - watch
 - apiGroups:
-  - spire.trustauth.net
+  - spire.byted.sh
   resources:
   - clusterissuers/status
   - issuers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - spire.byted.sh
+  resources:
+  - spires
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - spire.byted.sh
+  resources:
+  - spires/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - spire.byted.sh
+  resources:
+  - spires/status
   verbs:
   - get
   - patch

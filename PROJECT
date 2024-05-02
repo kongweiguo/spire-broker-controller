@@ -2,27 +2,36 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: trustauth.net
+domain: byted.sh
 layout:
 - go.kubebuilder.io/v4
-projectName: spire-broker-controller
-repo: github.com/kongweiguo/spire-broker-controller
+projectName: spire-issuer
+repo: github.com/kongweiguo/spire-issuer
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: trustauth.net
+  domain: byted.sh
   group: spire
   kind: Issuer
-  path: github.com/kongweiguo/spire-broker-controller/api/v1alpha1
+  path: github.com/kongweiguo/spire-issuer/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: trustauth.net
+  domain: byted.sh
   group: spire
   kind: ClusterIssuer
-  path: github.com/kongweiguo/spire-broker-controller/api/v1alpha1
+  path: github.com/kongweiguo/spire-issuer/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: byted.sh
+  group: spire
+  kind: Spire
+  path: github.com/kongweiguo/spire-issuer/api/v1alpha1
   version: v1alpha1
 version: "3"

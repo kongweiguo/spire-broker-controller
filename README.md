@@ -1,12 +1,12 @@
-# spire-broker-controller
+# spire-issuer
 
 ## Description
-spire-broker-controller is a intermediate/downstream authority of spire server clusters, can sign the SVID, including x509 and jwt, for pod that has expected Annotations defined in a CR. 
+spire-issuer is a intermediate/downstream authority of spire server clusters, can sign the SVID, including x509 and jwt, for pod that has expected Annotations defined in a CR. 
 Also it can handle the the CertificateRequest for cert manager, but only x509 certificate cloud be returned.
 
 ## Archtecture
 
-![image](https://github.com/kongweiguo/spire-broker-controller/assets/1670845/9c884519-6271-46ed-8d43-9f411f4c8ad5)
+![image](https://github.com/kongweiguo/spire-issuer/assets/1670845/9c884519-6271-46ed-8d43-9f411f4c8ad5)
 
 
 ## Getting Started
@@ -23,13 +23,13 @@ kubectl apply -f config/samples/
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/spire-broker-controller:tag
+make docker-build docker-push IMG=<some-registry>/spire-issuer:tag
 ```
 
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/spire-broker-controller:tag
+make deploy IMG=<some-registry>/spire-issuer:tag
 ```
 
 ### Uninstall CRDs
@@ -83,7 +83,7 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
-Copyright 2023 will@trustauth.net.
+Copyright 2023 will@byted.sh.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -97,3 +97,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+
+kubebuilder create api --group spire.byted.sh --version v1alpha1 --kind Spire

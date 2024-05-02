@@ -17,7 +17,7 @@ limitations under the License.
 package utils
 
 import (
-	"github.com/kongweiguo/spire-broker-controller/api/v1alpha1"
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,7 +28,7 @@ const (
 	ReasonSkipProcess       = "SkipProcess"
 )
 
-func SetConditionError(status *v1alpha1.IssuerStatus, conditionType string, message string) {
+func SetConditionError(status *v1alpha1.SpireIssuerStatus, conditionType string, message string) {
 	nc := metav1.Condition{
 		Type:    conditionType,
 		Status:  metav1.ConditionFalse,
@@ -39,7 +39,7 @@ func SetConditionError(status *v1alpha1.IssuerStatus, conditionType string, mess
 	SetCondition(status, nc)
 }
 
-func SetConditionWaiting(status *v1alpha1.IssuerStatus, conditionType string, message string) {
+func SetConditionWaiting(status *v1alpha1.SpireIssuerStatus, conditionType string, message string) {
 	nc := metav1.Condition{
 		Type:    conditionType,
 		Status:  metav1.ConditionFalse,
@@ -50,7 +50,7 @@ func SetConditionWaiting(status *v1alpha1.IssuerStatus, conditionType string, me
 	SetCondition(status, nc)
 }
 
-func SetConditionSuccess(status *v1alpha1.IssuerStatus, conditionType string) {
+func SetConditionSuccess(status *v1alpha1.SpireIssuerStatus, conditionType string) {
 	nc := metav1.Condition{
 		Type:    conditionType,
 		Status:  metav1.ConditionTrue,
@@ -62,7 +62,7 @@ func SetConditionSuccess(status *v1alpha1.IssuerStatus, conditionType string) {
 }
 
 // SetCondition ...
-func SetCondition(status *v1alpha1.IssuerStatus, nc metav1.Condition) {
+func SetCondition(status *v1alpha1.SpireIssuerStatus, nc metav1.Condition) {
 	var conditions []metav1.Condition
 	exist := false
 
@@ -90,7 +90,7 @@ func SetCondition(status *v1alpha1.IssuerStatus, nc metav1.Condition) {
 	status.Conditions = conditions
 }
 
-func GetCondition(status *v1alpha1.IssuerStatus, conditionType string) (metav1.Condition, bool) {
+func GetCondition(status *v1alpha1.SpireIssuerStatus, conditionType string) (metav1.Condition, bool) {
 	for _, v := range status.Conditions {
 		if v.Type == conditionType {
 			return v, true
@@ -100,7 +100,7 @@ func GetCondition(status *v1alpha1.IssuerStatus, conditionType string) (metav1.C
 	return metav1.Condition{}, false
 }
 
-func DeleteCondition(status *v1alpha1.IssuerStatus, conditionType string) {
+func DeleteCondition(status *v1alpha1.SpireIssuerStatus, conditionType string) {
 	olds := status.Conditions
 
 	for idx := 0; idx < len(olds); idx++ {

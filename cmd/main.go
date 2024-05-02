@@ -1,5 +1,5 @@
 /*
-Copyright 2023 will@trustauth.net.
+Copyright 2023 will@byted.sh.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,10 +36,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	"github.com/kongweiguo/spire-broker-controller/api/v1alpha1"
-	"github.com/kongweiguo/spire-broker-controller/internal/authority"
-	controllers "github.com/kongweiguo/spire-broker-controller/internal/controller"
 	"github.com/prometheus/common/version"
+
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
+	spirev1alpha1 "github.com/kongweiguo/spire-issuer/api/v1alpha1"
+	"github.com/kongweiguo/spire-issuer/internal/authority"
+	"github.com/kongweiguo/spire-issuer/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -54,6 +56,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(spirev1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -114,7 +117,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "3ccb49e8.trustauth.net",
+		LeaderElectionID:       "3ccb49e8.byted.sh",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -133,21 +136,21 @@ func main() {
 	}
 
 	if err = (&controllers.IssuerReconciler{
-		Kind:                     "Issuer",
+		Kind:                     "SpireIssuer",
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
 		ClusterResourceNamespace: clusterResourceNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Issuer")
+		setupLog.Error(err, "unable to create controller", "controller", "SpireIssuer")
 		os.Exit(1)
 	}
 	if err = (&controllers.IssuerReconciler{
-		Kind:                     "ClusterIssuer",
+		Kind:                     "ClusterSpireIssuer",
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
 		ClusterResourceNamespace: clusterResourceNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterIssuer")
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterSpireIssuer")
 		os.Exit(1)
 	}
 
@@ -161,6 +164,13 @@ func main() {
 	// 	setupLog.Error(err, "unable to create controller", "controller", "CertificateRequest")
 	// 	os.Exit(1)
 	// }
+	if err = (&controller.SpireReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Spire")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

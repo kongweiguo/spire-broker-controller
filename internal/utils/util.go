@@ -27,16 +27,16 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/kongweiguo/spire-broker-controller/api/v1alpha1"
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetSpecAndStatus(issuer client.Object) (*v1alpha1.IssuerSpec, *v1alpha1.IssuerStatus, error) {
+func GetSpecAndStatus(issuer client.Object) (*v1alpha1.SpireIssuerSpec, *v1alpha1.SpireIssuerStatus, error) {
 	switch t := issuer.(type) {
-	case *v1alpha1.Issuer:
+	case *v1alpha1.SpireIssuer:
 		return &t.Spec, &t.Status, nil
-	case *v1alpha1.ClusterIssuer:
+	case *v1alpha1.ClusterSpireIssuer:
 		return &t.Spec, &t.Status, nil
 	default:
 		return nil, nil, fmt.Errorf("not an issuer type: %t", t)

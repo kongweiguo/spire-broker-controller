@@ -13,7 +13,7 @@ import (
 
 	cfcsr "github.com/cloudflare/cfssl/csr"
 	"github.com/kongweiguo/cryptoutils/encoding"
-	"github.com/kongweiguo/spire-broker-controller/internal/utils"
+	"github.com/kongweiguo/spire-issuer/internal/utils"
 	"github.com/pkg/errors"
 
 	"github.com/spiffe/go-spiffe/v2/spiffegrpc/grpccredentials"
@@ -181,14 +181,14 @@ func (s *SpireClient) GetDownstreamAuthority(ctx context.Context) (*Authority, e
 	}
 
 	ca := &Authority{
-		PrivateKey:    privatekey,
-		Certificate:   CertChain[0],
-		CertChain:     CertChain,
-		Bundle:        Bundle,
-		PrivateKeyPEM: PrivateKeyPEM,
-		CertPEM:       CertPEM,
-		CertChainPEM:  CertChainPEM,
-		BundlePEM:     BundlePEM,
+		PrivateKey:          privatekey,
+		Certificate:         CertChain[0],
+		CertificateChain:    CertChain,
+		TrustPool:           Bundle,
+		PrivateKeyPEM:       PrivateKeyPEM,
+		CertificatePEM:      CertPEM,
+		CertificateChainPEM: CertChainPEM,
+		TrustPoolPEM:        BundlePEM,
 	}
 
 	return ca, nil
@@ -203,7 +203,7 @@ func (s *SpireClient) generateKeyAndCSR() (csr []byte, privateKey crypto.Signer,
 	}
 
 	req := &cfcsr.CertificateRequest{
-		CN: "trustauth.net",
+		CN: "byted.sh",
 		Names: []cfcsr.Name{
 			{
 				C: "CN",

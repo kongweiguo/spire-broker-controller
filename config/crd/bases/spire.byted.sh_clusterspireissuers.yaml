@@ -5,36 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: issuers.spire.byted.sh
+  name: clusterspireissuers.spire.byted.sh
 spec:
   group: spire.byted.sh
   names:
-    kind: Issuer
-    listKind: IssuerList
-    plural: issuers
-    singular: issuer
-  scope: Namespaced
+    kind: ClusterSpireIssuer
+    listKind: ClusterSpireIssuerList
+    plural: clusterspireissuers
+    singular: clusterspireissuer
+  scope: Cluster
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Phase
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .metadata.notBefore
-      name: NotAfter
-      type: date
-    - jsonPath: .metadata.notAfter
-      name: NotAfter
-      type: date
-    - jsonPath: .metadata.certChain
-      name: CertChain
-      type: string
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Issuer is the Schema for the issuers API
+        description: ClusterSpireIssuer is the Schema for the clusterissuers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -49,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: IssuerSpec defines the desired state of Issuer
+            description: SpireIssuerSpec defines the desired state of SpireIssuer
             properties:
               agentSocket:
                 type: string
@@ -63,7 +47,7 @@ spec:
             - trustDomain
             type: object
           status:
-            description: IssuerStatus defines the observed state of Issuer
+            description: SpireIssuerStatus defines the observed state of SpireIssuer
             properties:
               certChain:
                 type: string

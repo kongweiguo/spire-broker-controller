@@ -1,5 +1,5 @@
 /*
-Copyright 2023 will@trustauth.net.
+Copyright 2023 will@byted.sh.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the spire v1alpha1 API group
 // +kubebuilder:object:generate=true
-// +groupName=spire.trustauth.net
+// +groupName=spire.byted.sh
 package v1alpha1
 
 import (
@@ -26,7 +26,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "spire.trustauth.net", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "spire.byted.sh", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

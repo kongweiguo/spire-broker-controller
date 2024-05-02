@@ -4,4 +4,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: CERTIFICATE_NAMESPACE/CERTIFICATE_NAME
-  name: clusterissuers.spire.trustauth.net
+  name: clusterissuers.spire.byted.sh

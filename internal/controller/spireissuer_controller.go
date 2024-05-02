@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
-	"github.com/kongweiguo/spire-broker-controller/api/v1alpha1"
-	"github.com/kongweiguo/spire-broker-controller/internal/authority"
-	"github.com/kongweiguo/spire-broker-controller/internal/utils"
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
+	"github.com/kongweiguo/spire-issuer/internal/authority"
+	"github.com/kongweiguo/spire-issuer/internal/utils"
 )
 
 const (
@@ -47,7 +47,7 @@ const (
 
 type Reconciler func(ictx *issuerContext) (ctrl.Result, error)
 
-// IssuerReconciler reconciles a Issuer object
+// IssuerReconciler reconciles a SpireIssuer object
 type IssuerReconciler struct {
 	Logger logr.Logger
 
@@ -67,12 +67,12 @@ type issuerContext struct {
 	req ctrl.Request
 
 	issuer client.Object
-	spec   *v1alpha1.IssuerSpec
-	status *v1alpha1.IssuerStatus
+	spec   *v1alpha1.SpireIssuerSpec
+	status *v1alpha1.SpireIssuerStatus
 }
 
 func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	issuerType, err := r.newIssuer()
+	issuerType, err := r.newSpireIssuerObject()
 	if err != nil {
 		return err
 	}
@@ -93,25 +93,16 @@ func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// +kubebuilder:rbac:groups=spire.trustauth.net,resources=issuers;clusterissuers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=spire.trustauth.net,resources=issuers/status;clusterissuers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=spire.byted.sh,resources=issuers;clusterissuers,verbs=get;list;watch
+// +kubebuilder:rbac:groups=spire.byted.sh,resources=issuers/status;clusterissuers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-
-func (r *IssuerReconciler) newIssuer() (client.Object, error) {
-	issuerGVK := v1alpha1.GroupVersion.WithKind(r.Kind)
-	ro, err := r.Scheme.New(issuerGVK)
-	if err != nil {
-		return nil, err
-	}
-	return ro.(client.Object), nil
-}
 
 func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 	r.Logger = log
 
-	issuer, err := r.newIssuer()
+	issuer, err := r.newSpireIssuerObject()
 	if err != nil {
 		log.Error(err, "Unrecognised issuer type")
 		return ctrl.Result{}, nil
@@ -140,9 +131,22 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 		status: issuerStatus,
 	}
 
-	result, _ = r.reconcile(iCtx)
+	result, err = r.reconcile(iCtx)
+	if err != nil {
+		log.Error(err, "reconcile fail. won't retrying.")
+		return ctrl.Result{}, nil
+	}
 
 	return result, nil
+}
+
+func (r *IssuerReconciler) newSpireIssuerObject() (client.Object, error) {
+	issuerGVK := v1alpha1.GroupVersion.WithKind(r.Kind)
+	ro, err := r.Scheme.New(issuerGVK)
+	if err != nil {
+		return nil, err
+	}
+	return ro.(client.Object), nil
 }
 
 func (r *IssuerReconciler) reconcile(iCtx *issuerContext) (ctrl.Result, error) {
@@ -223,7 +227,15 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 	defer func() {
 		if err != nil {
 			utils.SetConditionError(ictx.status, conditionType, err.Error())
+
 		} else {
+			ictx.status.NotAfter = metav1.NewTime(ca.Certificate.NotAfter)
+			ictx.status.NotBefore = metav1.NewTime(ca.Certificate.NotBefore)
+
+			ictx.status.Certificate = string(ca.CertificatePEM)
+			ictx.status.CertificateChain = string(ca.CertificateChainPEM)
+			ictx.status.TrustPool = string(ca.TrustPoolPEM)
+
 			utils.SetConditionSuccess(ictx.status, conditionType)
 		}
 	}()
@@ -253,6 +265,7 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 			r.Logger.Error(err, "build authority failed")
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
+
 		secret = authority.AuthorityToSecret(&secretName, ca)
 
 		err = ctrl.SetControllerReference(ictx.issuer, secret, r.Scheme)
@@ -331,7 +344,7 @@ func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*authority.Autho
 }
 
 func (r *IssuerReconciler) applyStatus(ictx *issuerContext) {
-	issuerInSystem, err := r.newIssuer()
+	issuerInSystem, err := r.newSpireIssuerObject()
 	if err != nil {
 		r.Logger.Error(err, "Unrecognised issuer type")
 		return
@@ -340,6 +353,7 @@ func (r *IssuerReconciler) applyStatus(ictx *issuerContext) {
 	if err := r.Client.Get(ictx.ctx, ictx.req.NamespacedName, issuerInSystem); err != nil {
 		if err := client.IgnoreNotFound(err); err != nil {
 			r.Logger.Error(err, "unexpected get error")
+			return
 		}
 		r.Logger.Info("Not found. Ignoring.")
 		return
