@@ -26,10 +26,10 @@ import (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase"
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-//+kubebuilder:printcolumn:name="NotAfter",type="date",JSONPath=".metadata.notBefore"
-//+kubebuilder:printcolumn:name="NotAfter",type="date",JSONPath=".metadata.notAfter"
-//+kubebuilder:printcolumn:name="CertificateChain",type="string",JSONPath=".metadata.certChain"
+// +kubebuilder:printcolumn:name="NotBefore",type="date",JSONPath=".status.notBefore"
+// +kubebuilder:printcolumn:name="NotAfter",type="date",JSONPath=".status.notAfter"
+//+kubebuilder:printcolumn:name="SecretName",type="string",JSONPath=".status.secretName"
+//+kubebuilder:printcolumn:name="SecretNamespace",type="string",JSONPath=".status.secretNamespace"
 
 // SpireIssuer is the Schema for the issuers API
 type SpireIssuer struct {
@@ -57,7 +57,21 @@ type SpireIssuerSpec struct {
 	TrustDomain   string `json:"trustDomain"`  // trustdomain of the issuer,should be same with spire agent and spire server configuration
 	AgentSocket   string `json:"agentSocket"`  // spire agent's unix domain socket path
 	ServerAddress string `json:"spireAddress"` // spire server listen address, looks like: “address:port”
-	//WorkMode      WorkMode `json:"workMode,omitempty"` // issuer work mode, could be one ["downstream"|"mint"]
+	Config        Config `json:"config"`
+}
+
+type Config struct {
+	TTL int64  `json:"ttl"` // hours
+	C   string `json:"c,omitempty"`
+	L   string `json:"l,omitempty"`
+	ST  string `json:"st,omitempty"`
+	O   string `json:"o,omitempty"`
+	OU  string `json:"ou,omitempty"`
+	CN  string `json:"cn,omitempty"`
+
+	Hosts []string `json:"hosts,omitempty"` // URI, DNS, IPs
+
+	Ratio string `json:"ratio,omitempty"`
 }
 
 type WorkMode string
@@ -72,20 +86,19 @@ type SpireIssuerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Phase            Phase              `json:"phase,omitempty"`
-	NotBefore        metav1.Time        `json:"notBefore,omitempty"`
-	NotAfter         metav1.Time        `json:"notAfter,omitempty"`
-	Conditions       []metav1.Condition `json:"conditions,omitempty"`
-	Certificate      string             `json:"certificate,omitempty"`
-	CertificateChain string             `json:"certificateChain,omitempty"`
-	TrustPool        string             `json:"trustPool,omitempty"`
+	Phase           Phase              `json:"phase,omitempty"`
+	NotBefore       metav1.Time        `json:"notBefore,omitempty"`
+	NotAfter        metav1.Time        `json:"notAfter,omitempty"`
+	SecretName      string             `json:"secretName,omitempty"`
+	SecretNamespace string             `json:"secretNamespace,omitempty"`
+	Conditions      []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type Phase string
 
 const (
 	Processing  Phase = "Processing"
-	Running     Phase = "Running"
+	Ready       Phase = "Ready"
 	Terminating Phase = "Terminating"
 )
 

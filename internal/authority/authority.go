@@ -6,7 +6,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/kongweiguo/spire-issuer/internal/utils"
@@ -16,9 +18,10 @@ import (
 )
 
 const (
-	NamePrivateKey       = "PrivateKey"       // PKCS #8 encoded private key in pem format
-	NameCertificateChain = "CertificateChain" // certificates, from spire issuer leaf to root
-	NameTrustPool        = "TrustPool"        // trust pool
+	NamePrivateKey       = "PrivateKey"      // PKCS #8 encoded private key in pem format
+	NameCertificate      = "Cert"            // certificates, from spire issuer leaf to root
+	NameCertificateChain = "CertChain"       // certificates, from spire issuer leaf to root
+	NameTrustPool        = "X509Authorities" // trust pool
 )
 
 var (
@@ -28,17 +31,15 @@ var (
 var serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
 
 type Authority struct {
-	PrivateKey       crypto.Signer
-	Certificate      *x509.Certificate
-	CertificateChain []*x509.Certificate // certiciate chain from
-	TrustPool        []*x509.Certificate
+	PrivateKey      crypto.Signer
+	Cert            *x509.Certificate
+	CertChain       []*x509.Certificate // certificate chain from
+	X509Authorities []*x509.Certificate
 
-	PrivateKeyPEM       []byte
-	CertificatePEM      []byte
-	CertificateChainPEM []byte
-	TrustPoolPEM        []byte
-
-	BackRatio float64
+	PrivateKeyPem      []byte
+	CertPem            []byte
+	CertChainPem       []byte
+	X509AuthoritiesPem []byte
 }
 
 func AuthorityToSecret(secretName *types.NamespacedName, ca *Authority) *corev1.Secret {
@@ -49,9 +50,10 @@ func AuthorityToSecret(secretName *types.NamespacedName, ca *Authority) *corev1.
 			Namespace: secretName.Namespace,
 		},
 		Data: map[string][]byte{
-			NamePrivateKey:       ca.PrivateKeyPEM,
-			NameCertificateChain: ca.CertificateChainPEM,
-			NameTrustPool:        ca.TrustPoolPEM,
+			NamePrivateKey:       ca.PrivateKeyPem,
+			NameCertificate:      ca.CertPem,
+			NameCertificateChain: ca.CertChainPem,
+			NameTrustPool:        ca.X509AuthoritiesPem,
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
@@ -64,6 +66,10 @@ func SecretToAuthority(s *corev1.Secret) (*Authority, error) {
 	PrivateKeyPEM, ok := s.Data[NamePrivateKey]
 	if !ok {
 		return nil, fmt.Errorf("%s empty", NamePrivateKey)
+	}
+	CertPEM, ok := s.Data[NameCertificate]
+	if !ok {
+		return nil, fmt.Errorf("%s empty", NameCertificate)
 	}
 	CertChainPEM, ok := s.Data[NameCertificateChain]
 	if !ok {
@@ -80,6 +86,11 @@ func SecretToAuthority(s *corev1.Secret) (*Authority, error) {
 		return nil, err
 	}
 
+	Cert, err := utils.ParseCertPEM(CertPEM)
+	if err != nil {
+		return nil, err
+	}
+
 	CertChain, err := utils.ParseCertsPEM(CertChainPEM)
 	if err != nil {
 		return nil, err
@@ -91,37 +102,54 @@ func SecretToAuthority(s *corev1.Secret) (*Authority, error) {
 	}
 
 	ca := &Authority{
-		PrivateKey:          PrivateKey,
-		CertificateChain:    CertChain,
-		TrustPool:           Bundle,
-		PrivateKeyPEM:       PrivateKeyPEM,
-		CertificateChainPEM: CertChainPEM,
-		TrustPoolPEM:        BundlePEM,
+		PrivateKey:      PrivateKey,
+		Cert:            Cert,
+		CertChain:       CertChain,
+		X509Authorities: Bundle,
+
+		PrivateKeyPem:      PrivateKeyPEM,
+		CertPem:            CertPEM,
+		CertChainPem:       CertChainPEM,
+		X509AuthoritiesPem: BundlePEM,
 	}
 
 	return ca, nil
 }
 
 // NeedRotation check if the authorit should be rotated
-func (ca *Authority) NeedRotation() bool {
-	if ca == nil || len(ca.CertificateChain) < 1 {
+func (ca *Authority) NeedRotation(cfg *v1alpha1.Config) bool {
+	if ca == nil || len(ca.CertChain) < 1 {
 		return true
 	}
 
-	if !(ca.BackRatio > 0.3 && ca.BackRatio < 0.5) {
-		ca.BackRatio = defaultBackRatio
+	ratio, err := strconv.ParseFloat(cfg.Ratio, 64)
+	if err != nil {
+		ratio = defaultBackRatio
 	}
 
-	cert := ca.CertificateChain[0]
-	ttl := cert.NotAfter.Sub(cert.NotBefore)
-	now := time.Now()
+	if !(ratio > 0.3 && ratio < 0.5) {
+		ratio = defaultBackRatio
+	}
 
-	// less than
-	if now.After(cert.NotBefore.Add(ttl * time.Duration(1-ca.BackRatio))) {
+	cert := ca.Cert
+	now := time.Now().UTC()
+	gate := calculateTimePoint(cert.NotBefore, cert.NotAfter, ratio)
+
+	if now.UTC().After(gate.UTC()) {
 		return true
 	}
 
 	return false
+}
+
+func calculateTimePoint(NotBefore, NotAfter time.Time, ratio float64) time.Time {
+	// 计算时间差
+	duration := NotAfter.Sub(NotBefore)
+	// 计算偏移时间
+	offset := time.Duration(float64(duration) * ratio)
+	// 计算目标时间
+	targetTime := NotBefore.Add(offset)
+	return targetTime
 }
 
 // Sign signs a certificate request, applying a SigningPolicy and returns a DER
@@ -130,10 +158,6 @@ func (ca *Authority) Sign(crDER []byte, policy SigningPolicy, ttl time.Duration)
 
 	if ttl < 0 {
 		return nil, errors.New("ttl invalid")
-	}
-
-	if ca.NeedRotation() {
-		return nil, fmt.Errorf("the signer has expired, or the available time is less than the minimum valid time: NotAfter=%v", ca.Certificate.NotAfter)
 	}
 
 	cr, err := x509.ParseCertificateRequest(crDER)
@@ -152,10 +176,10 @@ func (ca *Authority) Sign(crDER []byte, policy SigningPolicy, ttl time.Duration)
 	now := time.Now()
 	notBefore := now.Add(-24 * time.Hour)
 	notAfter := now.Add(ttl)
-	if notAfter.After(ca.Certificate.NotAfter) {
-		notAfter = ca.Certificate.NotAfter
+	if notAfter.After(ca.Cert.NotAfter) {
+		notAfter = ca.Cert.NotAfter
 	}
-	if !now.Before(ca.Certificate.NotAfter) {
+	if !now.Before(ca.Cert.NotAfter) {
 		return nil, fmt.Errorf("refusing to sign a certificate that expired in the past")
 	}
 
@@ -177,7 +201,7 @@ func (ca *Authority) Sign(crDER []byte, policy SigningPolicy, ttl time.Duration)
 		return nil, err
 	}
 
-	der, err := x509.CreateCertificate(rand.Reader, tmpl, ca.Certificate, cr.PublicKey, ca.PrivateKey)
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, ca.Cert, cr.PublicKey, ca.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign certificate: %v", err)
 	}

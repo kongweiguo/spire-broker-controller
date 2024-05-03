@@ -1,18 +1,16 @@
 apiVersion: spire.byted.sh/v1alpha1
-kind: Issuer
+kind: SpireIssuer
 metadata:
+  name: sample-3
+  namespace: default
   labels:
     app.kubernetes.io/name: issuer
     app.kubernetes.io/instance: issuer-sample
     app.kubernetes.io/part-of: spire-issuer
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: spire-issuer
-  name: issuer-sample
-  namespace: default
 spec:
   # TODO(user): Add fields here
-  # workMode: "downstream"
-  # secretName: "issuer-sample"
   trustDomain: "example.com"
   agentSocket: "/tmp/spire-agent/public/api.sock"
-  spireAddress: "127.0.0.1:18081"
+  spireAddress: "127.0.0.1:8081"

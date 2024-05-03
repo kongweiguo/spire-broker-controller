@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-
 	"k8s.io/client-go/tools/record"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -83,13 +82,14 @@ func (r *IssuerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		r.ReconcileAuthority,
 	}
 
-	r.handlers[v1alpha1.Running] = []Reconciler{
+	r.handlers[v1alpha1.Ready] = []Reconciler{
 		r.ReconcileAuthority,
 	}
 
 	r.recorder = mgr.GetEventRecorderFor(v1alpha1.EventSource)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(issuerType).
+		Watches(&corev1.Secret{}, &handler.EnqueueRequestForObject{}). // 监视 Secrets
 		Complete(r)
 }
 
@@ -206,9 +206,9 @@ func (r *IssuerReconciler) reconcile(iCtx *issuerContext) (ctrl.Result, error) {
 	}
 
 	switch iCtx.status.Phase {
-	case v1alpha1.Running, v1alpha1.Processing:
+	case v1alpha1.Ready, v1alpha1.Processing:
 		if ready {
-			iCtx.status.Phase = v1alpha1.Running
+			iCtx.status.Phase = v1alpha1.Ready
 		} else {
 			iCtx.status.Phase = v1alpha1.Processing
 		}
@@ -221,6 +221,7 @@ func (r *IssuerReconciler) reconcile(iCtx *issuerContext) (ctrl.Result, error) {
 func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result, error) {
 	var err error
 	var ca *authority.Authority
+	var secret = new(corev1.Secret)
 
 	conditionType := utils.GetFuncName(r.ReconcileAuthority)
 
@@ -229,18 +230,15 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 			utils.SetConditionError(ictx.status, conditionType, err.Error())
 
 		} else {
-			ictx.status.NotAfter = metav1.NewTime(ca.Certificate.NotAfter)
-			ictx.status.NotBefore = metav1.NewTime(ca.Certificate.NotBefore)
-
-			ictx.status.Certificate = string(ca.CertificatePEM)
-			ictx.status.CertificateChain = string(ca.CertificateChainPEM)
-			ictx.status.TrustPool = string(ca.TrustPoolPEM)
+			ictx.status.NotAfter = metav1.NewTime(ca.Cert.NotAfter)
+			ictx.status.NotBefore = metav1.NewTime(ca.Cert.NotBefore)
+			ictx.status.SecretName = secret.Name
+			ictx.status.SecretNamespace = secret.Namespace
 
 			utils.SetConditionSuccess(ictx.status, conditionType)
 		}
 	}()
 
-	secret := &corev1.Secret{}
 	secretName := types.NamespacedName{Namespace: ictx.req.Namespace, Name: ictx.req.Name}
 	if len(secretName.Namespace) == 0 {
 		secretName.Namespace = r.ClusterResourceNamespace
@@ -256,7 +254,7 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
-		if !ca.NeedRotation() {
+		if !ca.NeedRotation(&ictx.spec.Config) {
 			return ctrl.Result{}, nil
 		}
 
@@ -266,7 +264,8 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
-		secret = authority.AuthorityToSecret(&secretName, ca)
+		newSecret := authority.AuthorityToSecret(&secretName, ca)
+		secret.Data = newSecret.Data
 
 		err = ctrl.SetControllerReference(ictx.issuer, secret, r.Scheme)
 		if err != nil {
@@ -325,7 +324,7 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 }
 
 func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*authority.Authority, error) {
-	cfg := &authority.SpireConfig{
+	spireConfig := &authority.SpireConfig{
 		TrustDomain:   iCtx.spec.TrustDomain,
 		AgentSocket:   iCtx.spec.AgentSocket,
 		ServerAddress: iCtx.spec.ServerAddress,
@@ -334,9 +333,9 @@ func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*authority.Autho
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	ca, err := authority.GetDownstreamAuthority(ctx, cfg)
+	ca, err := authority.GetDownstreamAuthority(ctx, spireConfig, &iCtx.spec.Config)
 	if err != nil {
-		r.Logger.Error(err, "BuildDownstreamAuthority fail")
+		r.Logger.Error(err, "GetDownstreamAuthority fail")
 		return nil, err
 	}
 

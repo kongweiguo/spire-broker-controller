@@ -118,7 +118,7 @@ package controller
 //		}
 //	}
 //
-//	// report gives feedback by updating the Ready Condition of the Certificate Request.
+//	// report gives feedback by updating the Ready Condition of the Cert Request.
 //	// For added visibility we also log a message and create a Kubernetes Event.
 //	report := func(reason, message string, err error) {
 //		status := cmmeta.ConditionFalse
@@ -240,7 +240,7 @@ package controller
 //	if err != nil {
 //		return ctrl.Result{}, fmt.Errorf("%w: %v", errSignerSign, err)
 //	}
-//	certificateRequest.Status.Certificate = signed
+//	certificateRequest.Status.Cert = signed
 //
 //	report(cmapi.CertificateRequestReasonIssued, "Signed", nil)
 //	return ctrl.Result{}, nil

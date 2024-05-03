@@ -1,9 +1,0 @@
-apiVersion: spire.byted.sh/v1alpha1
-kind: Spire
-metadata:
-  labels:
-    app.kubernetes.io/name: spire-issuer
-    app.kubernetes.io/managed-by: kustomize
-  name: spire-sample
-spec:
-  # TODO(user): Add fields here

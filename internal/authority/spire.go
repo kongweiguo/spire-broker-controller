@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -43,13 +44,13 @@ func Close() {
 	}
 }
 
-func GetDownstreamAuthority(ctx context.Context, cfg *SpireConfig) (*Authority, error) {
-	cli, err := c.getSpireClient(ctx, cfg)
+func GetDownstreamAuthority(ctx context.Context, spireConfig *SpireConfig, caCfg *v1alpha1.Config) (*Authority, error) {
+	cli, err := c.getSpireClient(ctx, spireConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	ca, err := cli.GetDownstreamAuthority(ctx)
+	ca, err := cli.GetDownstreamAuthority(ctx, caCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -137,12 +138,8 @@ func (s *SpireClient) Close() {
 	}
 }
 
-func (s *SpireClient) GetDownstreamAuthority(ctx context.Context) (*Authority, error) {
-	if !(s.downstreamAuthority.NeedRotation()) {
-		return s.downstreamAuthority, nil
-	}
-
-	csr, privatekey, err := s.generateKeyAndCSR()
+func (s *SpireClient) GetDownstreamAuthority(ctx context.Context, cfg *v1alpha1.Config) (*Authority, error) {
+	csr, privatekey, err := s.generateKeyAndCsr(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -160,41 +157,41 @@ func (s *SpireClient) GetDownstreamAuthority(ctx context.Context) (*Authority, e
 		return nil, fmt.Errorf("spire return emtpy ca certchain")
 	}
 
-	PrivateKeyDER, err := x509.MarshalPKCS8PrivateKey(privatekey)
+	PrivateKeyDer, err := x509.MarshalPKCS8PrivateKey(privatekey)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetDownstreamAuthority MarshalPKCS8PrivateKey fail")
 	}
-	PrivateKeyPEM := utils.PKCS8PrivateKeyDERtoPEM(PrivateKeyDER)
+	PrivateKeyPEM := utils.PKCS8PrivateKeyDERtoPEM(PrivateKeyDer)
 
-	CertPEM := utils.X509DERToPEM(resp.CaCertChain[0])
-	CertChainPEM := utils.X509DERsToPEMs(resp.X509Authorities)
-	BundlePEM := utils.X509DERsToPEMs(resp.X509Authorities)
+	CertPem := utils.X509DERToPEM(resp.CaCertChain[0])
+	CertChainPem := utils.X509DERsToPEMs(resp.CaCertChain)
+	X509AuthoritiesPem := utils.X509DERsToPEMs(resp.X509Authorities)
 
 	CertChain, err := utils.ParseCertsDER(resp.CaCertChain)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetDownstreamAuthority ParseCertsDER(resp.CaCertChain) fail")
 	}
 
-	Bundle, err := utils.ParseCertsDER(resp.X509Authorities)
+	X509Authorities, err := utils.ParseCertsDER(resp.X509Authorities)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetDownstreamAuthority ParseCertsDER(resp.X509Authorities) fail")
 	}
 
 	ca := &Authority{
-		PrivateKey:          privatekey,
-		Certificate:         CertChain[0],
-		CertificateChain:    CertChain,
-		TrustPool:           Bundle,
-		PrivateKeyPEM:       PrivateKeyPEM,
-		CertificatePEM:      CertPEM,
-		CertificateChainPEM: CertChainPEM,
-		TrustPoolPEM:        BundlePEM,
+		PrivateKey:         privatekey,
+		Cert:               CertChain[0],
+		CertChain:          CertChain,
+		X509Authorities:    X509Authorities,
+		PrivateKeyPem:      PrivateKeyPEM,
+		CertPem:            CertPem,
+		CertChainPem:       CertChainPem,
+		X509AuthoritiesPem: X509AuthoritiesPem,
 	}
 
 	return ca, nil
 }
 
-func (s *SpireClient) generateKeyAndCSR() (csr []byte, privateKey crypto.Signer, err error) {
+func (s *SpireClient) generateKeyAndCsr(cfg *v1alpha1.Config) (csr []byte, privateKey crypto.Signer, err error) {
 	keyRequest := cfcsr.NewKeyRequest()
 
 	priv, err := keyRequest.Generate()
@@ -203,13 +200,18 @@ func (s *SpireClient) generateKeyAndCSR() (csr []byte, privateKey crypto.Signer,
 	}
 
 	req := &cfcsr.CertificateRequest{
-		CN: "byted.sh",
+		CN: cfg.CN,
 		Names: []cfcsr.Name{
 			{
-				C: "CN",
-				O: "TrustAuth",
+				C:  cfg.C,
+				ST: cfg.ST,
+				L:  cfg.L,
+				O:  cfg.O,
+				OU: cfg.OU,
 			},
 		},
+
+		Hosts: cfg.Hosts,
 	}
 
 	csrPEM, err := cfcsr.Generate(priv.(crypto.Signer), req)

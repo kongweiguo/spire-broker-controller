@@ -19,17 +19,17 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
+    - jsonPath: .status.notBefore
+      name: NotBefore
       type: date
-    - jsonPath: .metadata.notBefore
+    - jsonPath: .status.notAfter
       name: NotAfter
       type: date
-    - jsonPath: .metadata.notAfter
-      name: NotAfter
-      type: date
-    - jsonPath: .metadata.certChain
-      name: CertChain
+    - jsonPath: .status.secretName
+      name: SecretName
+      type: string
+    - jsonPath: .status.secretNamespace
+      name: SecretNamespace
       type: string
     name: v1alpha1
     schema:
@@ -53,20 +53,45 @@ spec:
             properties:
               agentSocket:
                 type: string
+              config:
+                properties:
+                  c:
+                    type: string
+                  cn:
+                    type: string
+                  hosts:
+                    items:
+                      type: string
+                    type: array
+                  l:
+                    type: string
+                  o:
+                    type: string
+                  ou:
+                    type: string
+                  ratio:
+                    type: string
+                  st:
+                    type: string
+                  ttl:
+                    format: int64
+                    type: integer
+                required:
+                - ttl
+                type: object
               spireAddress:
                 type: string
               trustDomain:
                 type: string
             required:
             - agentSocket
+            - config
             - spireAddress
             - trustDomain
             type: object
           status:
             description: SpireIssuerStatus defines the observed state of SpireIssuer
             properties:
-              certChain:
-                type: string
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
@@ -142,6 +167,10 @@ spec:
                 format: date-time
                 type: string
               phase:
+                type: string
+              secretName:
+                type: string
+              secretNamespace:
                 type: string
             type: object
         type: object

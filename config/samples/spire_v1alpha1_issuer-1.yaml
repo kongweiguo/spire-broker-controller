@@ -1,0 +1,26 @@
+apiVersion: spire.byted.sh/v1alpha1
+kind: SpireIssuer
+metadata:
+  name: sample-1
+  namespace: default
+  labels:
+    app.kubernetes.io/name: issuer
+    app.kubernetes.io/instance: issuer-sample
+    app.kubernetes.io/part-of: spire-issuer
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: spire-issuer
+spec:
+  # TODO(user): Add fields here
+  trustDomain: "trustdomain-1.org"
+  agentSocket: "/Users/kongweiguo/Documents/GitHub/spire-workspace/run/trustdomain-1/agent/agent-1/api.sock"
+  spireAddress: "127.0.0.1:8081"
+  config:
+    ttl: 24
+    c: SG
+    o: bitd
+    cn: bitd-1-spire-issuer
+    hosts:
+      - byted.sh
+      - bitd.io
+      - 192.168.1.1
+    ratio: "0.33"
