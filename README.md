@@ -1,12 +1,11 @@
 # spire-issuer
 
 ## Description
-spire-issuer is a intermediate/downstream authority of spire server clusters, can sign the SVID, including x509 and jwt, for pod that has expected Annotations defined in a CR. 
-Also it can handle the the CertificateRequest for cert manager, but only x509 certificate cloud be returned.
+spire-issuer is a intermediate/downstream authority of spire server. It helps sign the CertificateRequest as a spire downstream ca.
 
-## Archtecture
+## FLow
 
-![image](https://github.com/kongweiguo/spire-issuer/assets/1670845/9c884519-6271-46ed-8d43-9f411f4c8ad5)
+![image](https://github.com/kongweiguo/spire-issuer/assets/1670845/241373a3-73c6-4b9b-9654-616a1e3cea2b)
 
 
 ## Getting Started
