@@ -36,7 +36,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
-	"github.com/kongweiguo/spire-issuer/internal/authority"
+	"github.com/kongweiguo/spire-issuer/internal/spire"
 	"github.com/kongweiguo/spire-issuer/internal/utils"
 )
 
@@ -220,7 +220,7 @@ func (r *IssuerReconciler) reconcile(iCtx *issuerContext) (ctrl.Result, error) {
 
 func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result, error) {
 	var err error
-	var ca *authority.Authority
+	var ca *spire.Authority
 	var secret = new(corev1.Secret)
 
 	conditionType := utils.GetFuncName(r.ReconcileAuthority)
@@ -248,9 +248,9 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 	if err == nil {
 		r.Logger.Info("found secret, trying to check TTL")
 
-		ca, err = authority.SecretToAuthority(secret)
+		ca, err = spire.SecretToAuthority(secret)
 		if err != nil {
-			r.Logger.Error(err, "secret to authority failed")
+			r.Logger.Error(err, "secret to spire failed")
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
@@ -260,11 +260,11 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 
 		ca, err = r.buildAuthority(ictx)
 		if err != nil {
-			r.Logger.Error(err, "build authority failed")
+			r.Logger.Error(err, "build spire failed")
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
-		newSecret := authority.AuthorityToSecret(&secretName, ca)
+		newSecret := spire.AuthorityToSecret(&secretName, ca)
 		secret.Data = newSecret.Data
 
 		err = ctrl.SetControllerReference(ictx.issuer, secret, r.Scheme)
@@ -281,7 +281,7 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 
 		err = r.Client.Update(ictx.ctx, secret)
 		if err != nil {
-			r.Logger.Error(err, "build authority failed")
+			r.Logger.Error(err, "build spire failed")
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
@@ -295,7 +295,7 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 			return ctrl.Result{RequeueAfter: defaultHealthCheckInterval}, err
 		}
 
-		secret = authority.AuthorityToSecret(&secretName, ca)
+		secret = spire.AuthorityToSecret(&secretName, ca)
 
 		err = ctrl.SetControllerReference(ictx.issuer, secret, r.Scheme)
 		if err != nil {
@@ -323,8 +323,8 @@ func (r *IssuerReconciler) ReconcileAuthority(ictx *issuerContext) (ctrl.Result,
 	}
 }
 
-func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*authority.Authority, error) {
-	spireConfig := &authority.SpireConfig{
+func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*spire.Authority, error) {
+	spireConfig := &spire.SpireConfig{
 		TrustDomain:   iCtx.spec.TrustDomain,
 		AgentSocket:   iCtx.spec.AgentSocket,
 		ServerAddress: iCtx.spec.ServerAddress,
@@ -333,7 +333,7 @@ func (r *IssuerReconciler) buildAuthority(iCtx *issuerContext) (*authority.Autho
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	ca, err := authority.GetDownstreamAuthority(ctx, spireConfig, &iCtx.spec.Config)
+	ca, err := spire.GetDownstreamAuthority(ctx, spireConfig, &iCtx.spec.Config)
 	if err != nil {
 		r.Logger.Error(err, "GetDownstreamAuthority fail")
 		return nil, err

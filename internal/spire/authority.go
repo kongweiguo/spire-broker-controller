@@ -1,11 +1,11 @@
-package authority
+package spire
 
 import (
 	"crypto"
 	"crypto/rand"
 	"crypto/x509"
-	"errors"
 	"fmt"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	"math/big"
 	"strconv"
@@ -152,30 +152,26 @@ func calculateTimePoint(NotBefore, NotAfter time.Time, ratio float64) time.Time 
 	return targetTime
 }
 
-// Sign signs a certificate request, applying a SigningPolicy and returns a DER
-// encoded x509 certificate.
-func (ca *Authority) Sign(crDER []byte, policy SigningPolicy, ttl time.Duration) ([]byte, error) {
-
-	if ttl < 0 {
-		return nil, errors.New("ttl invalid")
-	}
-
-	cr, err := x509.ParseCertificateRequest(crDER)
+// Sign signs a certificate request, applying a SigningPolicy and returns
+// a pem encoded x509 certificate chain
+func (ca *Authority) Sign(certificateRequest *cmapi.CertificateRequestSpec) ([]byte, error) {
+	csr, err := utils.ParseCSRPEM(certificateRequest.Request)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse certificate request: %v", err)
 	}
-	if err := cr.CheckSignature(); err != nil {
+	if err := csr.CheckSignature(); err != nil {
 		return nil, fmt.Errorf("unable to verify certificate request signature: %v", err)
 	}
 
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate a serial number for %s: %v", cr.Subject.CommonName, err)
+		return nil, fmt.Errorf("unable to generate a serial number for %s: %v", csr.Subject.CommonName, err)
 	}
 
+	// set up the validation period, fix to the right range
 	now := time.Now()
 	notBefore := now.Add(-24 * time.Hour)
-	notAfter := now.Add(ttl)
+	notAfter := now.Add(certificateRequest.Duration.Duration)
 	if notAfter.After(ca.Cert.NotAfter) {
 		notAfter = ca.Cert.NotAfter
 	}
@@ -185,25 +181,37 @@ func (ca *Authority) Sign(crDER []byte, policy SigningPolicy, ttl time.Duration)
 
 	tmpl := &x509.Certificate{
 		SerialNumber:       serialNumber,
-		Subject:            cr.Subject,
-		DNSNames:           cr.DNSNames,
-		IPAddresses:        cr.IPAddresses,
-		EmailAddresses:     cr.EmailAddresses,
-		URIs:               cr.URIs,
-		PublicKeyAlgorithm: cr.PublicKeyAlgorithm,
-		PublicKey:          cr.PublicKey,
-		Extensions:         cr.Extensions,
-		ExtraExtensions:    cr.ExtraExtensions,
+		Subject:            csr.Subject,
+		DNSNames:           csr.DNSNames,
+		IPAddresses:        csr.IPAddresses,
+		EmailAddresses:     csr.EmailAddresses,
+		URIs:               csr.URIs,
+		PublicKeyAlgorithm: csr.PublicKeyAlgorithm,
+		PublicKey:          csr.PublicKey,
+		Extensions:         csr.Extensions,
+		ExtraExtensions:    csr.ExtraExtensions,
 		NotBefore:          notBefore,
 		NotAfter:           notAfter,
 	}
+
+	policy := PermissiveSigningPolicy{
+		DeadNotBefore: ca.Cert.NotBefore,
+		DeadNotAfter:  ca.Cert.NotAfter,
+		Usages:        certificateRequest.Usages,
+		CouldCA:       false,
+	}
+
 	if err := policy.apply(tmpl); err != nil {
 		return nil, err
 	}
 
-	der, err := x509.CreateCertificate(rand.Reader, tmpl, ca.Cert, cr.PublicKey, ca.PrivateKey)
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, ca.Cert, csr.PublicKey, ca.PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign certificate: %v", err)
 	}
-	return der, nil
+
+	x509PEM := utils.X509DER2PEM(der)
+	chain := append(x509PEM, ca.CertChainPem...)
+
+	return chain, nil
 }

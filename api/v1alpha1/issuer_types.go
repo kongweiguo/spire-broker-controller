@@ -71,14 +71,14 @@ type Config struct {
 
 	Hosts []string `json:"hosts,omitempty"` // URI, DNS, IPs
 
-	Ratio string `json:"ratio,omitempty"`
+	Ratio string `json:"ratio,omitempty"` // TODO
 }
 
 type WorkMode string
 
 const (
-	Downstream WorkMode = "downstream" //
-	Mint       WorkMode = "mint"
+	Downstream WorkMode = "downstream" // spire server downstream ca
+	Mint       WorkMode = "mint"       // connect back to spire server to mint svid, not supported now
 )
 
 // SpireIssuerStatus defines the observed state of SpireIssuer

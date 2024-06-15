@@ -40,8 +40,8 @@ import (
 
 	"github.com/kongweiguo/spire-issuer/api/v1alpha1"
 	spirev1alpha1 "github.com/kongweiguo/spire-issuer/api/v1alpha1"
-	"github.com/kongweiguo/spire-issuer/internal/authority"
 	"github.com/kongweiguo/spire-issuer/internal/controller"
+	"github.com/kongweiguo/spire-issuer/internal/spire"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -108,8 +108,8 @@ func main() {
 		"cluster-resource-namespace", clusterResourceNamespace,
 	)
 
-	authority.Init()
-	defer authority.Close()
+	spire.Init()
+	defer spire.Close()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

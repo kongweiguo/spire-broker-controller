@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package authority
+package spire
 
 import (
 	"crypto/x509"
 	"fmt"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"sort"
 	"time"
-
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 )
 
 // SigningPolicy validates a CertificateRequest before it's signed by the
@@ -44,26 +43,52 @@ type SigningPolicy interface {
 //   - It sets BasicConstraints to true.
 //   - It sets IsCA to false.
 type PermissiveSigningPolicy struct {
-	// TTL is the certificate TTL. It's used to calculate the NotAfter value of
-	// the certificate.
-	TTL time.Duration
+	// No matter how, the certificate to be issued out MUST not before this time
+	DeadNotBefore time.Time
+
+	// No matter how, the certificate to be issued out MUST not after this time
+	DeadNotAfter time.Time
+
 	// Usages are the allowed usages of a certificate.
 	Usages []cmapi.KeyUsage
+
+	// If the downstream certificate could be a CA certificate
+	CouldCA bool
+
+	// TODO ... any other extensions
 }
 
 func (p PermissiveSigningPolicy) apply(tmpl *x509.Certificate) error {
+	// 1. usage
 	usage, extUsages, err := keyUsagesFromStrings(p.Usages)
 	if err != nil {
 		return err
 	}
 	tmpl.KeyUsage = usage
 	tmpl.ExtKeyUsage = extUsages
-	tmpl.NotAfter = tmpl.NotBefore.Add(p.TTL)
 
+	// 2. time range
+	if tmpl.NotAfter.After(p.DeadNotAfter) {
+		tmpl.NotAfter = p.DeadNotAfter
+	}
+
+	if tmpl.NotBefore.Before(p.DeadNotBefore) {
+		return fmt.Errorf("refusing to sign a certificate that siged out even bfore the ca")
+	}
+
+	if tmpl.NotBefore.After(tmpl.NotAfter) {
+		return fmt.Errorf("refusing to sign a certificate that has wrong time range")
+	}
+
+	// 3. ca
+	if !p.CouldCA {
+		tmpl.IsCA = false
+	}
+
+	// 4. extensions
 	tmpl.ExtraExtensions = nil
 	tmpl.Extensions = nil
 	tmpl.BasicConstraintsValid = true
-	tmpl.IsCA = false
 
 	return nil
 }

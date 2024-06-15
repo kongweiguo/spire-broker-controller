@@ -1,4 +1,4 @@
-package authority
+package spire
 
 import (
 	"context"
@@ -163,9 +163,9 @@ func (s *SpireClient) GetDownstreamAuthority(ctx context.Context, cfg *v1alpha1.
 	}
 	PrivateKeyPEM := utils.PKCS8PrivateKeyDERtoPEM(PrivateKeyDer)
 
-	CertPem := utils.X509DERToPEM(resp.CaCertChain[0])
-	CertChainPem := utils.X509DERsToPEMs(resp.CaCertChain)
-	X509AuthoritiesPem := utils.X509DERsToPEMs(resp.X509Authorities)
+	CertPem := utils.X509DER2PEM(resp.CaCertChain[0])
+	CertChainPem := utils.X509DERs2PEMs(resp.CaCertChain)
+	X509AuthoritiesPem := utils.X509DERs2PEMs(resp.X509Authorities)
 
 	CertChain, err := utils.ParseCertsDER(resp.CaCertChain)
 	if err != nil {

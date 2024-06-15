@@ -24,6 +24,11 @@ import (
 	"strings"
 )
 
+const (
+	CERTIFICATEREQUEST = "CERTIFICATE REQUEST"
+	CERTIFICATE        = "CERTIFICATE"
+)
+
 func ParseCertPEM(pemBytes []byte) (*x509.Certificate, error) {
 	// extract PEM from request object
 	block, _ := pem.Decode(pemBytes)
@@ -50,7 +55,7 @@ func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 		if block == nil {
 			return nil, errors.New("decode pem slice fail")
 		}
-		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		if block.Type != CERTIFICATE || len(block.Headers) != 0 {
 			continue
 		}
 
@@ -85,26 +90,35 @@ func ParseCertsDER(certsDER [][]byte) ([]*x509.Certificate, error) {
 
 func ParseCSRPEM(pemBytes []byte) (*x509.CertificateRequest, error) {
 	block, _ := pem.Decode(pemBytes)
-	if block == nil || block.Type != "CERTIFICATE REQUEST" {
+	if block == nil || block.Type != CERTIFICATEREQUEST {
 		return nil, errors.New("PEM block type must be CERTIFICATE REQUEST")
 	}
 	return x509.ParseCertificateRequest(block.Bytes)
 }
 
-func X509DERToPEM(der []byte) []byte {
+func CSRPEM2DER(pemBytes []byte) ([]byte, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != CERTIFICATEREQUEST {
+		return nil, errors.New("PEM block type must be CERTIFICATE REQUEST")
+	}
+
+	return block.Bytes, nil
+}
+
+func X509DER2PEM(der []byte) []byte {
 	x509PEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
+		Type:  CERTIFICATE,
 		Bytes: der,
 	})
 
 	return x509PEM
 }
 
-func X509DERsToPEMs(ders [][]byte) []byte {
+func X509DERs2PEMs(ders [][]byte) []byte {
 	var pems string
 
 	for _, der := range ders {
-		pem := X509DERToPEM(der)
+		pem := X509DER2PEM(der)
 
 		pems += fmt.Sprintf("%s\n", pem)
 	}

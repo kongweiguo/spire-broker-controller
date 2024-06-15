@@ -115,3 +115,13 @@ func GetFuncName(f interface{}) string {
 	list := strings.Split(name, ".")
 	return strings.TrimSuffix(list[len(list)-1], "-fm")
 }
+
+func GetPhase(status *v1alpha1.SpireIssuerStatus) *v1alpha1.Phase {
+
+	return &status.Phase
+}
+
+func IsReady(status *v1alpha1.SpireIssuerStatus) bool {
+
+	return status.Phase != v1alpha1.Ready
+}
